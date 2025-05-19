@@ -1,0 +1,113 @@
+﻿@using QuizIT.Service.Entities // Nhập không gian tên chứa các thực thể (entities) của dịch vụ, như các lớp mô hình cơ sở dữ liệu.
+@using QuizIT.Service.Models // Nhập không gian tên chứa các mô hình (models) của dịch vụ, có thể là các DTO hoặc view model.
+@using QuizIT.Common.Models // Nhập không gian tên chứa các mô hình chung, có thể bao gồm các lớp như Rank hoặc CurrentUser.
+@model Exam // Chỉ định rằng model của view này là một đối tượng kiểu Exam, chứa dữ liệu về bộ đề thi.
+
+@{
+    ViewData["Title"] = "QuizIT | Chi tiết bộ đề"; // Đặt tiêu đề của trang web, hiển thị trên tab trình duyệt.
+    Layout = "~/Views/Shared/_LayoutClient.cshtml"; // Chỉ định layout chính cho view, sử dụng file _LayoutClient.cshtml làm giao diện chung.
+    int top = 1; // Khởi tạo biến top để theo dõi thứ hạng trong bảng xếp hạng, bắt đầu từ 1.
+    var rankLst = ViewBag.RankLst as List<Rank>; // Lấy danh sách xếp hạng từ ViewBag và ép kiểu thành List<Rank>.
+                                                 //Thêm 1 phần tử đằng sau làm lính canh // Bình luận: Thêm một phần tử giả vào cuối danh sách để đơn giản hóa logic vòng lặp.
+    rankLst.Add(new Rank
+            {
+                Point = -1 // Tạo đối tượng Rank mới với Point = -1, đóng vai trò là "lính canh" để tránh lỗi vượt chỉ số.
+            });
+    List<string> LevelList = new List<string>() { "Dễ", "Trung Bình", "Khó" }; // Tạo danh sách các mức độ (Dễ, Trung Bình, Khó) để hiển thị mức độ của bộ đề.
+}
+
+@section scripts {
+    <script src="~/js/client/exam.js"></script> // Chèn tệp JavaScript exam.js để xử lý các tương tác phía client cho trang chi tiết bộ đề.
+}
+
+<h1 class="cotent-title">Chi tiết bộ đề</h1> // Hiển thị tiêu đề chính của trang với nội dung "Chi tiết bộ đề". Lưu ý: Có lỗi chính tả "cotent" (nên là "content").
+<ol class="breadcrumb">
+    // Tạo một breadcrumb (đường dẫn điều hướng) dạng danh sách có thứ tự.
+    <li class="breadcrumb-item">
+        // Một mục trong breadcrumb.
+        <a href="~/bo-de">Danh sách bộ đề</a> // Liên kết đến trang danh sách bộ đề.
+    </li>
+    <li class="breadcrumb-item active"><a href="~/bo-de/chi-tiet/@Model.Id">Chi tiết bộ đề</a></li> // Mục hiện tại, hiển thị chi tiết bộ đề với ID cụ thể, được đánh dấu là active.
+</ol>
+<div class="d-flex justify-content-end mt-4">
+    // Tạo một div với lớp CSS để căn chỉnh các nút về phía bên phải, có margin trên 4 đơn vị.
+    <a class="btn-base m-btn-grey text-white" href="~/lich-su?examId=@Model.Id" target="_blank">
+        // Tạo nút liên kết đến trang lịch sử làm bài, mở trong tab mới.
+        <i class='bx bx-time'></i> // Thêm biểu tượng đồng hồ từ thư viện Boxicons.
+        Lịch sử làm // Nội dung văn bản của nút: "Lịch sử làm".
+    </a>
+    <a class="btn-base m-btn-primary text-white ml-2" href="~/bo-de/lam-de/@Model.Id/@ViewBag.SessionId">
+        // Tạo nút liên kết đến trang làm bài với ID bộ đề và SessionId từ ViewBag, có margin trái 2 đơn vị.
+        <i class='bx bx-edit-alt'></i> // Thêm biểu tượng bút từ thư viện Boxicons.
+        Làm ngay // Nội dung văn bản của nút: "Làm ngay".
+    </a>
+</div>
+<div class="content-card">
+    // Tạo một div với lớp content-card, thường là một thẻ chứa nội dung được định dạng như một thẻ hoặc bảng.
+    <div class="filter-group">
+        // Tạo một div con để nhóm các thông tin cơ bản của bộ đề.
+        <h1 class="form-sub-title">Thông tin cơ bản</h1> // Hiển thị tiêu đề phụ: "Thông tin cơ bản".
+        <h3 class="text-center exam-main-title">@Model.ExamName.Trim()</h3> // Hiển thị tên bộ đề, loại bỏ khoảng trắng thừa bằng Trim(), căn giữa.
+        <p class="text-center exam-sub-title">Chủ đề: @Model.Category.CategoryName.Trim()</p> // Hiển thị tên danh mục của bộ đề, loại bỏ khoảng trắng thừa, căn giữa.
+        <p class="text-center exam-sub-title">Thời gian làm: @(Model.Time.ToString() + " phút")</p> // Hiển thị thời gian làm bài (theo phút), căn giữa.
+        <p class="text-center exam-sub-title">Số câu hỏi: @Model.ExamDetail.Count()</p> // Hiển thị số lượng câu hỏi trong bộ đề, sử dụng Count() trên ExamDetail, căn giữa.
+        <p class="text-center exam-sub-title">Mức độ: @LevelList[Model.Level - 1]</p> // Hiển thị mức độ của bộ đề (Dễ/Trung Bình/Khó) dựa trên giá trị Model.Level, căn giữa.
+        <p class="text-center exam-sub-title">Người tạo: @Model.CreateByNavigation.FullName.Trim()</p> // Hiển thị tên người tạo bộ đề, loại bỏ khoảng trắng thừa, căn giữa.
+        <p class="text-center exam-sub-title">Số lượt làm: @Model.History.Count</p> // Hiển thị số lượt làm bài của bộ đề, căn giữa.
+        <p class="text-center exam-sub-title">
+            <i>Lưu ý: Khi hết thời gian làm bài, hệ thống sẽ tự nộp bài</i> // Hiển thị ghi chú in nghiêng về việc hệ thống tự nộp bài khi hết giờ, căn giữa.
+        </p>
+    </div>
+</div>
+<div class="content-card mt-4">
+    // Tạo một div khác với lớp content-card, chứa bảng xếp hạng, có margin trên 4 đơn vị.
+    <h1 class="form-sub-title">Top 10 bài làm tốt nhất</h1> // Hiển thị tiêu đề phụ: "Top 10 bài làm tốt nhất".
+    @if (rankLst.Count == 1) // Kiểm tra nếu danh sách xếp hạng chỉ có 1 phần tử (phần tử "lính canh"), tức là chưa có dữ liệu xếp hạng.
+    {
+        <p class="text-center mt-4">Chưa có bảng xếp hạng</p>
+        // Hiển thị thông báo căn giữa rằng chưa có bảng xếp hạng, có margin trên 4 đơn vị.
+    }
+    else
+    {
+        <div class="table-responsive ten-item mt-4">
+            // Tạo một div với lớp table-responsive để đảm bảo bảng hiển thị tốt trên các thiết bị, có margin trên 4 đơn vị.
+            <table class="table">
+                // Tạo một bảng HTML với lớp table, thường được định dạng bởi CSS framework như Bootstrap.
+                <thead>
+                    // Phần đầu bảng, chứa tiêu đề cột.
+                    <tr>
+                        // Một hàng trong phần đầu bảng.
+                        <th>Top</th> // Cột hiển thị thứ hạng.
+                        <th>Người dùng</th> // Cột hiển thị tên người dùng.
+                        <th>Số câu làm đúng</th> // Cột hiển thị số câu trả lời đúng.
+                        <th>Thời gian làm</th> // Cột hiển thị thời gian làm bài.
+                    </tr>
+                </thead>
+                <tbody>
+                    // Phần thân bảng, chứa dữ liệu xếp hạng.
+                    @for (int i = 0; i < rankLst.Count - 1; i++) // Vòng lặp qua danh sách xếp hạng, trừ đi phần tử "lính canh" cuối cùng.
+                    {
+                        int second = Convert.ToInt32(rankLst[i].TimeDoExam * 60); // Chuyển đổi thời gian làm bài (phút) sang giây để tính toán hiển thị.
+                        <tr>
+                            // Một hàng trong thân bảng, đại diện cho một bản ghi xếp hạng.
+                            <td>@top</td> // Hiển thị thứ hạng hiện tại.
+                            <td class="bx-500">@rankLst[i].User.FullName.Trim()</td> // Hiển thị tên người dùng, loại bỏ khoảng trắng thừa, với lớp CSS bx-500 (có thể là độ đậm chữ).
+                            <td>@rankLst[i].Point</td> // Hiển thị số điểm (số câu làm đúng).
+                            <td>
+                                @((second / 60) + " phút " + (second % 60 != 0 ? ((second % 60) + " giây") : "")) // Hiển thị thời gian làm bài dạng "X phút Y giây", bỏ giây nếu chia hết cho 60.
+                            </td>
+                        </tr>
+                        if (rankLst[i].Point != rankLst[i + 1].Point) // Nếu điểm của bản ghi hiện tại khác với bản ghi tiếp theo, tăng thứ hạng.
+                        {
+                            top++; // Tăng giá trị top để chuyển sang thứ hạng tiếp theo.
+                        }
+                        else if (rankLst[i].TimeDoExam != rankLst[i + 1].TimeDoExam) // Nếu điểm bằng nhau nhưng thời gian làm bài khác nhau, tăng thứ hạng.
+                        {
+                            top++; // Tăng giá trị top để chuyển sang thứ hạng tiếp theo.
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

@@ -1,0 +1,106 @@
+﻿@using Newtonsoft.Json
+@using QuizIT.Service.Entities
+@using QuizIT.Service.Models
+@using QuizIT.Common.Models
+@using static QuizIT.Common.Constant.Role
+@model History
+
+
+@{
+    ViewData["Title"] = "QuizIT | Chi tiết lịch sử";
+    Layout = "~/Views/Shared/_LayoutClient.cshtml";
+    int second = Convert.ToInt32(Model.TimeDoExam * 60);
+    List<HistoryDetail> historyDetailLst = Model.HistoryDetail.ToList();
+    Exam exam = JsonConvert.DeserializeObject<Exam>(Model.JsonExamp);
+    if (exam == null)
+        exam = Model.Exam;
+}
+
+@section scripts{
+    <script src="~/js/client/exam.js"></script>
+}
+
+<div class="mb-5">
+    <h3 class="text-center exam-main-title">@Model.Exam.ExamName.Trim()</h3>
+    <p class="text-center exam-sub-title">Chủ đề: @Model.Exam.Category.CategoryName.Trim()</p>
+    <p class="text-center exam-sub-title">Thời gian làm: @(Model.Exam.Time.ToString() + " phút")</p>
+    <p class="text-center exam-sub-title" id="time-do-exam" data-time="@Model.TimeDoExam">
+        Thời gian hoàn thành: @((second/60) + " phút " + (second % 60 != 0 ? ((second%60) + " giây") : ""))
+    </p>
+    <p class="text-center exam-sub-title">Số câu hỏi: @Model.Exam.ExamDetail.Count()</p>
+    <p class="text-center exam-sub-title">Số câu làm đúng: @Model.Point</p>
+    <p class="text-center exam-sub-title">Trạng thái đề: @(Model.Exam.IsActive == true ? "Hoạt động" : "Không hoạt động")</p>
+    <p class="text-center exam-sub-title">Ngày làm: @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+    @if (CurrentUser.Role == ADMIN)
+    {
+        <p class="text-center exam-sub-title">Người làm: @Model.User.FullName.Trim()</p>
+    }
+</div>
+@foreach (var examDetail in exam.ExamDetail.OrderBy(c => c.Order))
+{
+    //Lấy ra đáp án người dùng đã chọn
+    var quesionSelect = historyDetailLst.FirstOrDefault(c => c.QuestionId == examDetail.QuestionId);
+    /* 1 la dung, 2 la sai, 0 la chua chon dap an*/
+    var isAnswerCorrect = (quesionSelect != null && quesionSelect.AnswerSelect != "X") ? (quesionSelect.AnswerSelect == examDetail.Question.AnswerCorrect ? 1 : 2) : 0;
+    var answerSelect = quesionSelect != null ? quesionSelect.AnswerSelect : "";
+    <div class="question-item readonly" data-target="@examDetail.QuestionId">
+        <p class="question-title">
+            <b>Câu @examDetail.Order: @(examDetail.Question.Content)</b>
+        </p>
+        <div class="question-answer">
+            <div class="question-input">
+                <input type="radio" id="@(examDetail.QuestionId + "-A")" name="@examDetail.QuestionId" value="A" checked="@(answerSelect == "A" ? true : false)" />
+            </div>
+            <div>
+                <label for="@(examDetail.QuestionId + "-A")">
+                    <span>A: </span>@examDetail.Question.AnswerA
+                </label>
+            </div>
+        </div>
+        <div class="question-answer">
+            <div class="question-input">
+                <input type="radio" id="@(examDetail.QuestionId + "-B")" name="@examDetail.QuestionId" value="B" checked="@(answerSelect == "B" ? true : false)" />
+            </div>
+            <div>
+                <label for="@(examDetail.QuestionId + "-B")">
+                    <span>B: </span>@examDetail.Question.AnswerB
+                </label>
+            </div>
+        </div>
+        <div class="question-answer">
+            <div class="question-input">
+                <input type="radio" id="@(examDetail.QuestionId + "-C")" name="@examDetail.QuestionId" value="C" checked="@(answerSelect == "C" ? true : false)" />
+            </div>
+            <div>
+                <label for="@(examDetail.QuestionId + "-C")">
+                    <span>C: </span>@examDetail.Question.AnswerC
+                </label>
+            </div>
+        </div>
+        <div class="question-answer">
+            <div class="question-input">
+                <input type="radio" id="@(examDetail.QuestionId + "-D")" name="@examDetail.QuestionId" value="D" checked="@(answerSelect == "D" ? true : false)" />
+            </div>
+            <div>
+                <label for="@(examDetail.QuestionId + "-D")">
+                    <span>D: </span>@examDetail.Question.AnswerD
+                </label>
+            </div>
+        </div>
+        <p class="mb-4 font-weight-bold @(isAnswerCorrect != 0 ? (isAnswerCorrect == 1 ? "text-success" : "text-danger") : "text-primary")">
+            @(isAnswerCorrect != 0 ? (isAnswerCorrect == 1 ? "Đúng" : "Sai") : "Chưa chọn")
+        </p>
+    </div>
+}
+<form action="/history/eventexporthistory" method="post">
+    <input class="d-none" type="number" name="historyId" value="@Model.Id" />
+    <button class="btn-base m-btn-grey text-white" id="btn-export-excel">
+        Xuất Excel
+    </button>
+</form>
+
+<a class="btn-base m-btn-primary text-white ml-2" href="~/bo-de/lam-de/@Model.ExamId/@ViewBag.SessionId" id="btn-do-again">
+    Thi lại ngay
+</a>
+<button class="btn-base m-btn-secondary text-white btn-submit-exam" id="btn-submit-again">Chấm lại</button>
+
